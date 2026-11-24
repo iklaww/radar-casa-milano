@@ -7,7 +7,7 @@
 
 [generale]
 # Indirizzo della tua dashboard su GitHub Pages (serve per i link nei messaggi Telegram)
-dashboard_url = "https://TUO-UTENTE.github.io/radar-casa-milano/"
+dashboard_url = "https://iklaww.github.io/radar-casa-milano/"
 # Un tuo indirizzo email: viene inviato a OpenStreetMap quando si cercano le coordinate degli indirizzi
 contatto_email = "tua-email@example.com"
 # Dopo quanti giorni senza essere rivisto un annuncio è considerato "non più in vendita"
