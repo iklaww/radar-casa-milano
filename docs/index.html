@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radar Casa Milano</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<style>
+:root{
+  --bg:#f6f4ef; --panel:#fffdf9; --ink:#1d1c1a; --muted:#6c675f; --line:#e4dfd5; --soft:#efebe3;
+  --accent:#0e6b4a; --accent-soft:#e2f0e8; --warn:#a8531a; --warn-soft:#f8e9dc; --danger:#a23a2a;
+  --s5:#0e6b4a; --s4:#4b9e6b; --s3:#c79a1e; --s2:#d77a2d; --s1:#b8b2a7;
+  --radius:12px; --shadow:0 1px 2px rgba(30,25,15,.06),0 4px 16px rgba(30,25,15,.06);
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color:var(--ink); background:var(--bg);
+}
+*{box-sizing:border-box} body{margin:0} button,input,select{font:inherit;color:inherit}
+a{color:var(--accent)}
+.num{font-variant-numeric:tabular-nums}
+header{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:1000}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em;font-size:17px}
+.brand .dot{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+header .meta{color:var(--muted);font-size:13px}
+header .spacer{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:14px}
+.btn:hover{background:var(--soft)} .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.demo{background:var(--warn-soft);color:var(--warn);padding:8px 20px;font-size:13px;border-bottom:1px solid #efd5bf}
+.layout{display:grid;grid-template-columns:300px minmax(0,1fr);min-height:calc(100vh - 57px)}
+aside{border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;max-height:calc(100vh - 57px);position:sticky;top:57px}
+aside .tools{padding:14px;display:flex;gap:8px;border-bottom:1px solid var(--line)}
+aside input,aside select,.filters input,.filters select{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 10px;font-size:14px;min-width:0}
+aside input{flex:1}
+#qlist{overflow:auto;flex:1;padding:6px}
+.qi{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:9px 10px;border-radius:9px;cursor:pointer;border:1px solid transparent}
+.qi:hover{background:var(--soft)} .qi.sel{background:var(--accent-soft);border-color:#bcdccb}
+.qi .n{font-weight:600;font-size:14px}
+.qi .v{font-size:14px;text-align:right}
+.qi .sub{color:var(--muted);font-size:12px}
+.qi .tr{font-size:12px;text-align:right}
+.up{color:var(--danger)} .down{color:var(--accent)}
+.badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:var(--soft);color:var(--muted);white-space:nowrap}
+.badge.g{background:var(--accent-soft);color:var(--accent)} .badge.w{background:var(--warn-soft);color:var(--warn)} .badge.r{background:#f6e0dc;color:var(--danger)}
+main{padding:16px 20px 40px;min-width:0}
+.filters{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:end;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px}
+.filters label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.filters input[type=number]{width:110px}
+.filters .chk{flex-direction:row;align-items:center;gap:6px;font-size:13px;color:var(--ink);cursor:pointer}
+.filters input[type=range]{width:120px;padding:0}
+.summary{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.card h2{margin:0 0 2px;font-size:20px;letter-spacing:-.01em}
+.card h3{margin:0 0 10px;font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.kpi .l{font-size:12px;color:var(--muted)} .kpi .v{font-size:20px;font-weight:650;margin-top:2px}
+#map{height:430px;border-radius:var(--radius);border:1px solid var(--line);overflow:hidden;background:#e9e5dc;margin-bottom:14px;position:relative}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:-6px 0 14px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.listhead{display:flex;align-items:center;gap:10px;margin:6px 0 10px}
+.listhead h3{margin:0;font-size:16px} .listhead .spacer{flex:1}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.l-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:6px;transition:box-shadow .15s}
+.l-card:hover{box-shadow:var(--shadow)}
+.l-card.off{opacity:.55}
+.l-top{display:flex;gap:10px;align-items:flex-start}
+.sc{flex:none;width:42px;height:42px;border-radius:10px;color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px}
+.l-title{font-weight:600;font-size:14px;line-height:1.3}
+.l-q{font-size:12px;color:var(--muted)}
+.l-price{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.l-price b{font-size:18px} .l-price span{font-size:13px;color:var(--muted)}
+.l-badges{display:flex;gap:5px;flex-wrap:wrap}
+.star{margin-left:auto;background:none;border:none;font-size:18px;cursor:pointer;color:#c9c2b5;padding:0 2px;line-height:1}
+.star.on{color:#d19a12}
+.more{display:block;margin:16px auto 0}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+/* drawer */
+#shade{position:fixed;inset:0;background:rgba(20,18,14,.32);z-index:1999;display:none}
+#drawer{position:fixed;top:0;right:0;height:100vh;width:min(560px,100vw);background:var(--panel);z-index:2000;transform:translateX(100%);transition:transform .2s;overflow:auto;box-shadow:-10px 0 30px rgba(0,0,0,.12)}
+#drawer.open{transform:none} #shade.open{display:block}
+.d-head{position:sticky;top:0;background:var(--panel);padding:14px 18px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start;z-index:2}
+.d-head h2{font-size:18px;margin:0;line-height:1.3}
+.d-body{padding:16px 18px 40px;display:flex;flex-direction:column;gap:16px}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.fact{background:var(--soft);border-radius:9px;padding:8px 10px}
+.fact .l{font-size:11px;color:var(--muted)} .fact .v{font-weight:600;font-size:15px;margin-top:1px}
+.bars .row{display:grid;grid-template-columns:160px 1fr 52px;gap:8px;align-items:center;font-size:13px;margin:5px 0}
+.bars .track{height:8px;background:var(--soft);border-radius:99px;overflow:hidden}
+.bars .fill{height:100%;background:var(--accent);border-radius:99px}
+.note{font-size:12px;color:var(--muted);line-height:1.45}
+.offer{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.offer .fact{background:var(--accent-soft)}
+.code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--soft);padding:3px 7px;border-radius:6px}
+.desc{font-size:13px;line-height:1.5;color:#3c3934;white-space:pre-line}
+.comps{width:100%;border-collapse:collapse;font-size:13px}
+.comps td,.comps th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}
+.comps th{color:var(--muted);font-weight:500;font-size:12px}
+.comps tr{cursor:pointer} .comps tbody tr:hover{background:var(--soft)}
+svg text{font-family:inherit}
+.fallback-note{position:absolute;left:10px;bottom:8px;font-size:11px;color:var(--muted);background:rgba(255,255,255,.8);padding:2px 6px;border-radius:5px}
+@media (max-width:900px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  aside{min-width:0;position:static;max-height:none;border-right:none;border-bottom:1px solid var(--line)}
+  #qlist{display:flex;overflow-x:auto;gap:6px;padding:8px}
+  .qi{min-width:170px;border-color:var(--line)}
+  .summary{grid-template-columns:1fr} .kpis{grid-template-columns:repeat(2,1fr)}
+  #map{height:320px} header .meta{display:none} .bars .row{grid-template-columns:120px 1fr 44px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="dot"></span>Radar Casa Milano</div>
+  <div class="meta" id="meta">Caricamento…</div>
+  <div class="spacer"></div>
+  <button class="btn" id="favBtn" title="Mostra solo i preferiti">☆ Preferiti</button>
+</header>
+<div class="demo" id="demo" hidden>Stai guardando <b>dati di esempio inventati</b>. Gli annunci veri compariranno dopo la prima raccolta automatica.</div>
+<div class="layout">
+  <aside>
+    <div class="tools">
+      <input id="qsearch" placeholder="Cerca quartiere…" autocomplete="off">
+      <select id="qsort" title="Ordina quartieri">
+        <option value="nome">A–Z</option><option value="occ">Occasioni</option>
+        <option value="prezzo">€/m² ↑</option><option value="prezzod">€/m² ↓</option><option value="n">Annunci</option>
+      </select>
+    </div>
+    <div id="qlist"></div>
+  </aside>
+  <main>
+    <div class="filters" id="filters">
+      <label>Prezzo max (€)<input type="number" id="f-pmax" step="10000" min="0" placeholder="nessuno"></label>
+      <label>Superficie min (m²)<input type="number" id="f-mq" step="5" min="0" placeholder="0"></label>
+      <label>Locali min<select id="f-loc"><option value="0">tutti</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+      <label>Punteggio min: <span id="f-s-v" class="num">0</span><input type="range" id="f-s" min="0" max="100" step="5" value="0"></label>
+      <label>Fonte<select id="f-src"><option value="">tutte</option></select></label>
+      <label class="chk"><input type="checkbox" id="f-drop">Solo ribassati</label>
+      <label class="chk"><input type="checkbox" id="f-new">Nuovi (7 giorni)</label>
+      <label class="chk"><input type="checkbox" id="f-risk">Nascondi nuda propr./occupati</label>
+      <label class="chk"><input type="checkbox" id="f-asta">Nascondi aste</label>
+      <label class="chk"><input type="checkbox" id="f-off">Mostra anche venduti/ritirati</label>
+      <button class="btn" id="f-reset">Azzera</button>
+    </div>
+    <div class="summary">
+      <div class="card" id="qcard"></div>
+      <div class="card" id="qchart"></div>
+    </div>
+    <div id="map"></div>
+    <div class="legend" id="legend"></div>
+    <div class="listhead">
+      <h3 id="count"></h3><div class="spacer"></div>
+      <select id="lsort" class="btn">
+        <option value="score">Migliori occasioni</option><option value="sconto">Più sotto la mediana</option>
+        <option value="nuovi">Più recenti</option><option value="ribasso">Ribasso maggiore</option>
+        <option value="prezzo">Prezzo ↑</option><option value="ppsqm">€/m² ↑</option>
+      </select>
+    </div>
+    <div class="grid" id="grid"></div>
+    <button class="btn more" id="more" hidden>Mostra altri</button>
+  </main>
+</div>
+<div id="shade"></div>
+<div id="drawer" aria-hidden="true"></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const fmtE = v => v == null ? "—" : "€ " + Math.round(v).toLocaleString("it-IT");
+const fmtN = v => v == null ? "—" : Math.round(v).toLocaleString("it-IT");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cap = s => (s || "").toLowerCase().replace(/(^|[\s\-'(.\/])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+const COLORS = ["--s1","--s2","--s3","--s4","--s5"].map(v => getComputedStyle(document.documentElement).getPropertyValue(v).trim());
+const tier = s => s == null ? 0 : s >= 80 ? 4 : s >= 65 ? 3 : s >= 45 ? 2 : s >= 25 ? 1 : 0;
+const scol = s => COLORS[tier(s)];
+const daysAgo = (d, ref) => Math.round((new Date(ref) - new Date(d)) / 864e5);
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+let DATA, BY_UID = {}, favs = new Set(store.get("radar-fav", [])), onlyFav = false;
+const state = { q: null, page: 1 };
+const PAGE = 60;
+
+async function load() {
+  if (window.RADAR_DATA) return window.RADAR_DATA;
+  const r = await fetch("data.json?" + Date.now());
+  if (!r.ok) throw new Error("data.json non trovato");
+  return r.json();
+}
+
+function ppsqm(l) { return l.p && l.mq ? l.p / l.mq : null; }
+
+function filtered(ignoreQ = false) {
+  const pmax = +$("#f-pmax").value || 0, mq = +$("#f-mq").value || 0, loc = +$("#f-loc").value || 0;
+  const smin = +$("#f-s").value || 0, src = $("#f-src").value;
+  const drop = $("#f-drop").checked, nw = $("#f-new").checked, risk = $("#f-risk").checked;
+  const asta = $("#f-asta").checked, off = $("#f-off").checked;
+  return DATA.listings.filter(l => {
+    if (l.dup) return false;
+    if (!off && !l.att) return false;
+    if (!ignoreQ && state.q && l.q !== state.q) return false;
+    if (onlyFav && !favs.has(l.uid)) return false;
+    if (pmax && l.p > pmax) return false;
+    if (mq && (l.mq || 0) < mq) return false;
+    if (loc && (l.loc || 0) < loc) return false;
+    if (smin && (l.s || 0) < smin) return false;
+    if (src && l.src !== src) return false;
+    if (drop && !(l.d && l.d.ribasso_pct > 0)) return false;
+    if (nw && daysAgo(l.first, DATA.generato) > 7) return false;
+    if (risk && l.d && l.d.flags && l.d.flags.rischio.length) return false;
+    if (asta && l.asta) return false;
+    return true;
+  });
+}
+
+function median(a) { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
+
+/* ── Quartieri ───────────────────────────── */
+function renderQuartieri() {
+  const term = $("#qsearch").value.trim().toLowerCase(), sort = $("#qsort").value;
+  let qs = Object.entries(DATA.quartieri).filter(([n, v]) => v.n > 0 && n.toLowerCase().includes(term));
+  const cmp = { nome: (a, b) => a[0].localeCompare(b[0]), occ: (a, b) => b[1].occasioni - a[1].occasioni,
+    prezzo: (a, b) => (a[1].mediana || 1e9) - (b[1].mediana || 1e9), prezzod: (a, b) => (b[1].mediana || 0) - (a[1].mediana || 0),
+    n: (a, b) => b[1].n - a[1].n }[sort];
+  qs.sort(cmp);
+  const all = DATA.listings.filter(l => l.att && !l.dup);
+  const allOcc = all.filter(l => (l.s || 0) >= DATA.soglia).length;
+  const row = (name, label, v, sub, tr) => `<div class="qi ${state.q === name ? "sel" : ""}" data-q="${esc(name ?? "")}">
+      <span class="n">${esc(label)}</span><span class="v num">${v}</span>
+      <span class="sub">${sub}</span><span class="tr num">${tr}</span></div>`;
+  let html = term ? "" : row(null, "Tutta Milano", fmtE(median(all.filter(ppsqm).map(ppsqm))) + "/m²",
+    `${all.length} annunci${allOcc ? ` · <span class="badge g">${occLabel(allOcc)}</span>` : ""}`, "");
+  html += qs.map(([n, v]) => row(n, cap(n), v.mediana ? fmtE(v.mediana) + "/m²" : "—",
+    `${v.n} annunci${v.occasioni ? ` · <span class="badge g">${occLabel(v.occasioni)}</span>` : ""}`,
+    v.trend_pct == null ? "" : `<span title="Variazione del €/m² mediano richiesto negli ultimi 90 giorni" class="${v.trend_pct > 0 ? "up" : v.trend_pct < 0 ? "down" : ""}">${v.trend_pct > 0 ? "▲" : v.trend_pct < 0 ? "▼" : "="} ${Math.abs(v.trend_pct)}%</span>`)).join("");
+  $("#qlist").innerHTML = html || `<div class="empty">Nessun quartiere</div>`;
+  document.querySelectorAll(".qi").forEach(el => el.onclick = () => selectQ(el.dataset.q || null));
+}
+
+const occLabel = n => n === 1 ? "1 occasione" : n + " occasioni";
+function selectQ(q) {
+  state.q = q; state.page = 1;
+  setHash(q ? "q=" + encodeURIComponent(q) : "");
+  renderAll(true);
+}
+
+/* ── Riepilogo quartiere + grafici ───────── */
+function sparkline(serie, w = 520, h = 150) {
+  const pts = serie.filter(s => s[1]);
+  if (pts.length < 2) return `<div class="note">L'andamento comparirà dopo qualche giorno di raccolta.</div>`;
+  const xs = pts.map(p => +new Date(p[0])), ys = pts.map(p => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), lo = Math.min(...ys) * 0.97, hi = Math.max(...ys) * 1.03;
+  const pad = { l: 56, r: 10, t: 10, b: 22 };
+  const X = x => pad.l + (x - x0) / ((x1 - x0) || 1) * (w - pad.l - pad.r);
+  const Y = y => pad.t + (1 - (y - lo) / ((hi - lo) || 1)) * (h - pad.t - pad.b);
+  const d = pts.map((p, i) => (i ? "L" : "M") + X(xs[i]).toFixed(1) + "," + Y(p[1]).toFixed(1)).join("");
+  const ticks = [lo, (lo + hi) / 2, hi];
+  const fmtD = t => new Date(t).toLocaleDateString("it-IT", { day: "numeric", month: "short" });
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Andamento €/m²">
+    ${ticks.map(t => `<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line)"/>
+      <text x="${pad.l - 6}" y="${Y(t) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${fmtN(t)}</text>`).join("")}
+    <path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>
+    <circle cx="${X(xs.at(-1))}" cy="${Y(ys.at(-1))}" r="3.5" fill="var(--accent)"/>
+    <text x="${pad.l}" y="${h - 4}" font-size="11" fill="var(--muted)">${fmtD(x0)}</text>
+    <text x="${w - pad.r}" y="${h - 4}" font-size="11" fill="var(--muted)" text-anchor="end">${fmtD(x1)}</text></svg>`;
+}
+
+function barsByQuartiere() {
+  const qs = Object.entries(DATA.quartieri).filter(([, v]) => v.mediana && v.n >= 3).sort((a, b) => b[1].mediana - a[1].mediana);
+  if (!qs.length) return `<div class="note">Servono più annunci per il confronto.</div>`;
+  const max = qs[0][1].mediana, rowH = 20, w = 520, lw = 150, h = qs.length * rowH + 4;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="€/m² per quartiere">
+    ${qs.map(([n, v], i) => { const bw = (w - lw - 70) * v.mediana / max;
+      return `<g class="qbar" data-q="${esc(n)}" style="cursor:pointer">
+      <text x="${lw - 8}" y="${i * rowH + 14}" text-anchor="end" font-size="12" fill="var(--ink)">${esc(cap(n)).slice(0, 22)}</text>
+      <rect x="${lw}" y="${i * rowH + 4}" width="${bw}" height="13" rx="3" fill="var(--accent)" opacity=".8"/>
+      <text x="${lw + bw + 6}" y="${i * rowH + 14}" font-size="11" fill="var(--muted)">${fmtN(v.mediana)}</text></g>`; }).join("")}</svg>`;
+}
+
+function histogram(values, mark, w = 520, h = 120) {
+  if (values.length < 3) return "";
+  const lo = Math.min(...values), hi = Math.max(...values), nb = 14, step = (hi - lo) / nb || 1;
+  const bins = Array(nb).fill(0); values.forEach(v => bins[Math.min(nb - 1, Math.floor((v - lo) / step))]++);
+  const mx = Math.max(...bins), pad = 18, bw = (w - 20) / nb;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Distribuzione €/m²">
+    ${bins.map((b, i) => `<rect x="${10 + i * bw + 1}" y="${h - pad - (h - pad - 8) * b / mx}" width="${bw - 2}" height="${(h - pad - 8) * b / mx}" rx="2" fill="var(--s4)" opacity=".55"/>`).join("")}
+    ${mark ? `<line x1="${10 + (mark - lo) / (hi - lo || 1) * (w - 20)}" x2="${10 + (mark - lo) / (hi - lo || 1) * (w - 20)}" y1="4" y2="${h - pad}" stroke="var(--ink)" stroke-dasharray="3 3"/>` : ""}
+    <text x="10" y="${h - 4}" font-size="11" fill="var(--muted)">${fmtN(lo)} €/m²</text>
+    <text x="${w - 10}" y="${h - 4}" font-size="11" fill="var(--muted)" text-anchor="end">${fmtN(hi)} €/m²</text></svg>`;
+}
+
+function renderSummary(list) {
+  const q = state.q, v = q ? DATA.quartieri[q] : null;
+  const pp = list.map(ppsqm).filter(Boolean);
+  const med = median(pp);
+  const occ = list.filter(l => (l.s || 0) >= DATA.soglia).length;
+  const nuovi = list.filter(l => daysAgo(l.first, DATA.generato) <= 7).length;
+  const drops = list.filter(l => l.d && l.d.ribasso_pct > 0).length;
+  $("#qcard").innerHTML = `<h3>${q ? "Quartiere" : "Panoramica"}</h3><h2>${q ? esc(cap(q)) : "Tutta Milano"}</h2>
+    <div class="note">${v && v.trend_pct != null ? `Prezzo mediano richiesto ${v.trend_pct > 0 ? "in aumento" : "in calo"} del ${Math.abs(v.trend_pct)}% negli ultimi 90 giorni.` : "Annunci che corrispondono ai filtri."}</div>
+    <div class="kpis">
+      <div class="kpi"><div class="l">€/m² mediano</div><div class="v num">${fmtN(med)}</div></div>
+      <div class="kpi"><div class="l">Annunci</div><div class="v num">${list.length}</div></div>
+      <div class="kpi"><div class="l">Occasioni ≥${DATA.soglia}</div><div class="v num" style="color:var(--accent)">${occ}</div></div>
+      <div class="kpi"><div class="l">Nuovi 7 gg · Ribassati</div><div class="v num">${nuovi} · ${drops}</div></div>
+    </div>${q ? `<div style="margin-top:12px"><h3>Distribuzione €/m² (tratteggio = mediana)</h3>${histogram(pp, med)}</div>` : ""}`;
+  if (q) {
+    $("#qchart").innerHTML = `<h3>Andamento €/m² mediano richiesto</h3>${sparkline(v ? v.serie : [])}`;
+  } else {
+    $("#qchart").innerHTML = `<h3>€/m² mediano per quartiere · tocca per aprire</h3><div style="max-height:300px;overflow:auto">${barsByQuartiere()}</div>`;
+    document.querySelectorAll(".qbar").forEach(el => el.onclick = () => selectQ(el.dataset.q));
+  }
+}
+
+/* ── Mappa ───────────────────────────────── */
+let map, layer, fitted = null;
+function initMap() {
+  if (!window.L) return;
+  map = L.map("map", { zoomControl: true, scrollWheelZoom: false }).setView([45.4642, 9.19], 12);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    maxZoom: 19, subdomains: "abcd",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  }).addTo(map);
+  layer = L.layerGroup().addTo(map);
+  map.on("click", () => map.scrollWheelZoom.enable());
+}
+function renderMap(list, refit) {
+  const pts = list.filter(l => l.lat && l.lon).sort((a, b) => (a.s || 0) - (b.s || 0));
+  if (!window.L) return renderFallbackMap(pts);
+  layer.clearLayers();
+  pts.forEach(l => {
+    const m = L.circleMarker([l.lat, l.lon], { radius: 4 + tier(l.s) * 1.6, color: "#fff", weight: 1, fillColor: scol(l.s), fillOpacity: .9 });
+    m.bindTooltip(`<b>${fmtE(l.p)}</b> · ${fmtN(l.mq)} m²<br>${esc(cap(l.q))} · ⭐ ${l.s == null ? "—" : Math.round(l.s)}`);
+    m.on("click", () => openDetail(l.uid));
+    m.addTo(layer);
+  });
+  if (refit && pts.length) {
+    map.fitBounds(L.latLngBounds(pts.map(l => [l.lat, l.lon])).pad(0.08), { maxZoom: 15 });
+  }
+}
+function renderFallbackMap(pts) {
+  const w = 900, h = 430, b = [9.04, 45.39, 9.28, 45.54];
+  const X = lon => (lon - b[0]) / (b[2] - b[0]) * w, Y = lat => (1 - (lat - b[1]) / (b[3] - b[1])) * h;
+  $("#map").innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+    <rect width="${w}" height="${h}" fill="#ece8df"/>
+    ${pts.map(l => `<circle cx="${X(l.lon).toFixed(1)}" cy="${Y(l.lat).toFixed(1)}" r="${4 + tier(l.s) * 1.4}" fill="${scol(l.s)}" stroke="#fff" stroke-width="1" data-uid="${esc(l.uid)}" style="cursor:pointer"><title>${esc(fmtE(l.p) + " · " + cap(l.q))}</title></circle>`).join("")}
+  </svg><div class="fallback-note">Mappa semplificata (la mappa stradale non è disponibile qui)</div>`;
+  $("#map").querySelectorAll("circle").forEach(c => c.onclick = () => openDetail(c.dataset.uid));
+}
+
+/* ── Elenco ──────────────────────────────── */
+function badges(l) {
+  const out = [], d = l.d || {}, f = d.flags || {};
+  if (daysAgo(l.first, DATA.generato) <= 7) out.push(`<span class="badge g">nuovo</span>`);
+  if (d.ribasso_pct > 0) out.push(`<span class="badge g">−${d.ribasso_pct}% ribasso</span>`);
+  if (l.asta) out.push(`<span class="badge w">asta</span>`);
+  (f.rischio || []).forEach(x => out.push(`<span class="badge r">${esc(x)}</span>`));
+  (f.motivato || []).slice(0, 1).forEach(x => out.push(`<span class="badge w">${esc(x)}</span>`));
+  (f.info || []).filter(x => x !== "asta").slice(0, 2).forEach(x => out.push(`<span class="badge">${esc(x)}</span>`));
+  if (!l.att) out.push(`<span class="badge">non più online</span>`);
+  return out.join("");
+}
+function card(l) {
+  const d = l.d || {}, sz = d.sconto_zona_pct;
+  return `<div class="l-card ${l.att ? "" : "off"}" data-uid="${esc(l.uid)}">
+    <div class="l-top"><div class="sc num" style="background:${scol(l.s)}">${l.s == null ? "–" : Math.round(l.s)}</div>
+      <div style="min-width:0"><div class="l-title">${esc(l.t || l.addr || "Annuncio")}</div>
+      <div class="l-q">${esc(cap(l.q) || "quartiere n.d.")} · ${esc(l.src)}</div></div>
+      <button class="star ${favs.has(l.uid) ? "on" : ""}" data-fav="${esc(l.uid)}" title="Preferito">★</button></div>
+    <div class="l-price"><b class="num">${fmtE(l.p)}</b><span class="num">${fmtN(ppsqm(l))} €/m² · ${fmtN(l.mq)} m²${l.loc ? " · " + l.loc + " loc." : ""}</span></div>
+    ${sz != null ? `<div class="note num" style="color:${sz >= 0 ? "var(--accent)" : "var(--muted)"}">${Math.abs(sz)}% ${sz >= 0 ? "sotto" : "sopra"} la mediana di zona</div>` : ""}
+    <div class="l-badges">${badges(l)}</div></div>`;
+}
+function sortList(list) {
+  const k = $("#lsort").value, by = {
+    score: (a, b) => (b.s ?? -1) - (a.s ?? -1),
+    sconto: (a, b) => (b.d?.sconto_zona_pct ?? -99) - (a.d?.sconto_zona_pct ?? -99),
+    nuovi: (a, b) => b.first.localeCompare(a.first),
+    ribasso: (a, b) => (b.d?.ribasso_pct ?? 0) - (a.d?.ribasso_pct ?? 0),
+    prezzo: (a, b) => a.p - b.p,
+    ppsqm: (a, b) => (ppsqm(a) || 1e9) - (ppsqm(b) || 1e9) }[k];
+  return [...list].sort(by);
+}
+function renderList(list) {
+  const sorted = sortList(list), shown = sorted.slice(0, state.page * PAGE);
+  $("#count").textContent = `${list.length} annunci${state.q ? " a " + cap(state.q) : ""}${onlyFav ? " · preferiti" : ""}`;
+  $("#grid").innerHTML = shown.map(card).join("") || `<div class="empty">Nessun annuncio con questi filtri.</div>`;
+  $("#more").hidden = shown.length >= sorted.length;
+  $("#grid").querySelectorAll(".l-card").forEach(el => el.onclick = e => {
+    if (e.target.dataset.fav) { toggleFav(e.target.dataset.fav); e.stopPropagation(); return; }
+    openDetail(el.dataset.uid);
+  });
+}
+function toggleFav(uid) {
+  favs.has(uid) ? favs.delete(uid) : favs.add(uid);
+  store.set("radar-fav", [...favs]);
+  renderAll(false);
+  if ($("#drawer").classList.contains("open")) openDetail(uid, true);
+}
+
+/* ── Dettaglio ───────────────────────────── */
+function priceChart(h, w = 520, ht = 140) {
+  if (!h || h.length < 2) return `<div class="note">Nessuna variazione di prezzo registrata${h && h[0] ? ` dal ${new Date(h[0][0]).toLocaleDateString("it-IT")}` : ""}.</div>`;
+  const pts = [...h, [DATA.generato, h.at(-1)[1]]];
+  const xs = pts.map(p => +new Date(p[0])), ys = pts.map(p => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), yMin = Math.min(...ys), yMax = Math.max(...ys), lo = yMin * .97, hi = yMax * 1.02;
+  const pad = { l: 70, r: 10, t: 10, b: 22 };
+  const X = x => pad.l + (x - x0) / ((x1 - x0) || 1) * (w - pad.l - pad.r), Y = y => pad.t + (1 - (y - lo) / ((hi - lo) || 1)) * (ht - pad.t - pad.b);
+  let d = ""; pts.forEach((p, i) => { d += i ? `H${X(xs[i]).toFixed(1)}V${Y(p[1]).toFixed(1)}` : `M${X(xs[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`; });
+  const fmtD = t => new Date(t).toLocaleDateString("it-IT", { day: "numeric", month: "short" });
+  return `<svg viewBox="0 0 ${w} ${ht}" width="100%" role="img" aria-label="Storico prezzo">
+    ${[yMin, yMax].map(t => `<line x1="${pad.l}" x2="${w - pad.r}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--line)"/><text x="${pad.l - 6}" y="${Y(t) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${fmtE(t)}</text>`).join("")}
+    <path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2.2"/>
+    ${h.map(p => `<circle cx="${X(+new Date(p[0]))}" cy="${Y(p[1])}" r="3.5" fill="var(--accent)"><title>${fmtD(+new Date(p[0]))}: ${fmtE(p[1])}</title></circle>`).join("")}
+    <text x="${pad.l}" y="${ht - 4}" font-size="11" fill="var(--muted)">${fmtD(x0)}</text><text x="${w - pad.r}" y="${ht - 4}" font-size="11" fill="var(--muted)" text-anchor="end">${fmtD(x1)}</text></svg>`;
+}
+const LABELS = { prezzo_zona: ["Prezzo vs quartiere", 45], omi: ["Vs quotazioni OMI", 15], ribassi: ["Ribassi di prezzo", 20], tempo: ["Tempo sul mercato", 10], motivato: ["Venditore motivato", 10] };
+
+function openDetail(uid, keepScroll) {
+  const l = BY_UID[uid]; if (!l) return;
+  const d = l.d || {}, f = d.flags || {};
+  const comps = DATA.listings.filter(c => c.uid !== uid && c.att && !c.dup && c.q && c.q === l.q && c.mq && l.mq && c.mq >= l.mq * .7 && c.mq <= l.mq * 1.4)
+    .sort((a, b) => Math.abs(a.mq - l.mq) - Math.abs(b.mq - l.mq)).slice(0, 8);
+  const dupes = DATA.listings.filter(c => c.dup === uid);
+  const fact = (lab, v) => `<div class="fact"><div class="l">${lab}</div><div class="v num">${v}</div></div>`;
+  $("#drawer").innerHTML = `<div class="d-head"><div class="sc num" style="background:${scol(l.s)}">${l.s == null ? "–" : Math.round(l.s)}</div>
+      <div style="flex:1;min-width:0"><h2>${esc(l.t || l.addr || "Annuncio")}</h2><div class="l-q">${esc(cap(l.q) || "quartiere n.d.")}${l.addr && l.addr !== l.t ? " · " + esc(l.addr) : ""}</div></div>
+      <button class="star ${favs.has(uid) ? "on" : ""}" id="d-fav" title="Preferito">★</button><button class="btn" id="d-close" aria-label="Chiudi">✕</button></div>
+    <div class="d-body">
+      <div class="l-badges">${badges(l)}</div>
+      <div class="facts">
+        ${fact("Prezzo", fmtE(l.p))}${fact("€/m²", fmtN(ppsqm(l)))}${fact("Superficie", fmtN(l.mq) + " m²")}
+        ${fact("Locali · bagni", (l.loc ?? "—") + " · " + (l.bagni ?? "—"))}${fact("Piano", esc(l.piano ?? "—") + (l.asc === 1 ? " · ascensore" : l.asc === 0 ? " · no ascensore" : ""))}${fact("Stato", esc(l.stato || "—"))}
+      </div>
+      <div class="card"><h3>Perché questo punteggio</h3><div class="bars">
+        ${Object.entries(LABELS).map(([k, [lab, max]]) => d.punti && k in d.punti ? `<div class="row"><span>${lab}</span><div class="track"><div class="fill" style="width:${100 * d.punti[k] / max}%"></div></div><span class="num" style="text-align:right">${d.punti[k]}/${max}</span></div>` : "").join("")}
+      </div><div class="note" style="margin-top:8px">
+        ${d.ref_ppsqm ? `Mediana di confronto: <b>${fmtN(d.ref_ppsqm)} €/m²</b> (${esc(d.ref_scope)}, ${d.n_comps} annunci). Questo è <b>${Math.abs(d.sconto_zona_pct)}% ${d.sconto_zona_pct >= 0 ? "sotto" : "sopra"}</b>.` : "Dati di confronto insufficienti."}
+        ${d.ristrutturare ? " Da ristrutturare: lo sconto atteso per i lavori (circa 15%) è già tolto dal punteggio." : ""}
+        ${d.omi ? `<br>Quotazione OMI zona ${esc(d.omi.zona)}: ${fmtN(d.omi.min)}–${fmtN(d.omi.max)} €/m².` : ""}
+        ${f.rischio && f.rischio.length ? `<br><b style="color:var(--danger)">Attenzione:</b> ${esc(f.rischio.join(", "))}. Il prezzo basso potrebbe dipendere da questo, quindi il punteggio è ridotto.` : ""}
+        <br>Visto per la prima volta il ${new Date(l.first).toLocaleDateString("it-IT")} (${d.giorni ?? daysAgo(l.first, DATA.generato)} giorni fa)${l.att ? "" : `; non più visto dal ${new Date(l.last).toLocaleDateString("it-IT")}`}.
+      </div></div>
+      <div class="offer">${fact("Prezzo di riferimento (mediana × m²)", fmtE(d.prezzo_riferimento))}${fact("Prima proposta indicativa", fmtE(d.proposta))}</div>
+      <div class="note">Stima automatica sui prezzi <i>richiesti</i> degli annunci, non sui rogiti: usala come punto di partenza e verifica sempre con una visita e con le compravendite reali della zona.</div>
+      <div><h3 style="font-size:13px;color:var(--muted);margin:0 0 6px">STORICO PREZZO</h3>${priceChart(l.h)}</div>
+      ${comps.length ? `<div><h3 style="font-size:13px;color:var(--muted);margin:0 0 6px">ANNUNCI SIMILI NEL QUARTIERE</h3><table class="comps"><thead><tr><th>m²</th><th>Prezzo</th><th>€/m²</th><th>⭐</th></tr></thead><tbody>
+        ${comps.map(c => `<tr data-uid="${esc(c.uid)}"><td class="num">${fmtN(c.mq)}</td><td class="num">${fmtE(c.p)}</td><td class="num">${fmtN(ppsqm(c))}</td><td class="num">${c.s == null ? "–" : Math.round(c.s)}</td></tr>`).join("")}</tbody></table></div>` : ""}
+      ${dupes.length ? `<div class="note">Lo stesso immobile sembra pubblicato anche su: ${dupes.map(x => x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.src)}</a> (${fmtE(x.p)})` : `${esc(x.src)} (${fmtE(x.p)})`).join(", ")}</div>` : ""}
+      ${l.desc ? `<div class="desc">${esc(l.desc)}</div>` : ""}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        ${l.url ? `<a class="btn primary" href="${esc(l.url)}" target="_blank" rel="noopener">Apri l'annuncio originale ↗</a>` : ""}
+        <span class="note">Codice per i preferiti Telegram: <span class="code">${esc(uid)}</span> <button class="btn" id="d-copy" style="padding:2px 8px;font-size:12px">Copia</button></span>
+      </div>
+    </div>`;
+  $("#drawer").classList.add("open"); $("#shade").classList.add("open"); $("#drawer").setAttribute("aria-hidden", "false");
+  if (!keepScroll) $("#drawer").scrollTop = 0;
+  $("#d-close").onclick = closeDetail;
+  $("#d-fav").onclick = () => toggleFav(uid);
+  $("#d-copy").onclick = () => { try { navigator.clipboard.writeText(uid); $("#d-copy").textContent = "Copiato"; } catch {} };
+  $("#drawer").querySelectorAll(".comps tbody tr").forEach(tr => tr.onclick = () => openDetail(tr.dataset.uid));
+  setHash(uid);
+}
+function closeDetail() {
+  $("#drawer").classList.remove("open"); $("#shade").classList.remove("open"); $("#drawer").setAttribute("aria-hidden", "true");
+  setHash(state.q ? "q=" + encodeURIComponent(state.q) : "");
+}
+function setHash(h) { try { history.replaceState(null, "", h ? "#" + h : location.pathname + location.search); } catch {} }
+
+/* ── Avvio ───────────────────────────────── */
+function renderAll(refit) {
+  const list = filtered();
+  renderQuartieri(); renderSummary(list); renderMap(list, refit); renderList(list);
+}
+function saveFilters() {
+  const ids = ["f-pmax", "f-mq", "f-loc", "f-s", "f-src", "f-drop", "f-new", "f-risk", "f-asta", "f-off", "lsort", "qsort"];
+  store.set("radar-filters", Object.fromEntries(ids.map(id => { const el = $("#" + id); return [id, el.type === "checkbox" ? el.checked : el.value]; })));
+}
+function restoreFilters() {
+  const f = store.get("radar-filters", {});
+  Object.entries(f).forEach(([id, v]) => { const el = $("#" + id); if (!el) return; el.type === "checkbox" ? el.checked = v : el.value = v; });
+  $("#f-s-v").textContent = $("#f-s").value;
+}
+async function main() {
+  try { DATA = await load(); }
+  catch (e) { $("#meta").textContent = "Dati non disponibili"; $("#grid").innerHTML = `<div class="empty">Non trovo i dati (data.json). Verranno creati dalla prima esecuzione automatica.</div>`; return; }
+  DATA.listings.forEach(l => BY_UID[l.uid] = l);
+  $("#demo").hidden = !DATA.demo;
+  const att = DATA.listings.filter(l => l.att && !l.dup).length;
+  $("#meta").textContent = `Aggiornato il ${new Date(DATA.generato).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" })} · ${att} annunci attivi · fonti: ${DATA.fonti.join(", ")}`;
+  $("#f-src").innerHTML += DATA.fonti.map(s => `<option>${esc(s)}</option>`).join("");
+  $("#legend").innerHTML = [["≥ 80 ottimo", 4], ["65–80 buono", 3], ["45–65 interessante", 2], ["25–45 nella media", 1], ["< 25", 0]]
+    .map(([t, i]) => `<span><i style="background:${COLORS[i]}"></i>${t}</span>`).join("") + `<span>· tocca un punto per i dettagli</span>`;
+  restoreFilters();
+  initMap();
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (h.startsWith("q=") && DATA.quartieri[h.slice(2)]) state.q = h.slice(2);
+  renderAll(true);
+  if (h && BY_UID[h]) openDetail(h);
+  document.querySelectorAll("#filters input, #filters select").forEach(el => el.addEventListener("input", () => {
+    $("#f-s-v").textContent = $("#f-s").value; state.page = 1; saveFilters(); renderAll(false);
+  }));
+  $("#f-reset").onclick = () => { $("#filters").querySelectorAll("input").forEach(el => el.type === "checkbox" ? el.checked = false : el.value = el.type === "range" ? 0 : "");
+    $("#f-loc").value = "0"; $("#f-src").value = ""; $("#f-s-v").textContent = "0"; saveFilters(); renderAll(false); };
+  $("#lsort").onchange = () => { state.page = 1; saveFilters(); renderList(filtered()); };
+  $("#qsort").onchange = () => { saveFilters(); renderQuartieri(); };
+  $("#qsearch").oninput = renderQuartieri;
+  $("#more").onclick = () => { state.page++; renderList(filtered()); };
+  $("#shade").onclick = closeDetail;
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeDetail(); });
+  $("#favBtn").onclick = () => { onlyFav = !onlyFav; $("#favBtn").textContent = onlyFav ? "★ Solo preferiti" : "☆ Preferiti"; $("#favBtn").classList.toggle("primary", onlyFav); state.page = 1; renderAll(true); };
+}
+main();
+</script>
+</body>
+</html>

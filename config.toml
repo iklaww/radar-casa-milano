@@ -1,0 +1,78 @@
+# ─────────────────────────────────────────────────────────────
+#  Radar Casa Milano — configurazione
+#  Modifica questo file direttamente su GitHub (icona matita).
+#  Le chiavi segrete (API, password, token) NON vanno qui:
+#  si inseriscono in Settings → Secrets and variables → Actions.
+# ─────────────────────────────────────────────────────────────
+
+[generale]
+# Indirizzo della tua dashboard su GitHub Pages (serve per i link nei messaggi Telegram)
+dashboard_url = "https://TUO-UTENTE.github.io/radar-casa-milano/"
+# Un tuo indirizzo email: viene inviato a OpenStreetMap quando si cercano le coordinate degli indirizzi
+contatto_email = "tua-email@example.com"
+# Dopo quanti giorni senza essere rivisto un annuncio è considerato "non più in vendita"
+giorni_scadenza = 45
+
+# ── Cosa cerchi (vale per raccolta e notifiche) ──────────────
+[ricerca]
+prezzo_min = 0
+prezzo_max = 900000
+mq_min = 40
+mq_max = 0            # 0 = nessun limite
+locali_min = 1
+
+# ── Fonti dati ───────────────────────────────────────────────
+[fonti.idealista]
+# API ufficiale: richiedi le chiavi su https://developers.idealista.com/access-request
+attiva = true
+centro = "45.4642,9.1900"     # Duomo
+raggio_metri = 9000           # copre tutto il comune
+# Il piano gratuito ha un limite di richieste al mese (di solito 100): 3 pagine al giorno ≈ 90 al mese
+pagine_per_giorno = 3
+
+[fonti.email]
+# Legge le email di avviso delle ricerche salvate su Immobiliare.it, Idealista, Casa.it, ecc.
+attiva = true
+cartella = "INBOX"            # su Gmail puoi usare un'etichetta, es. "Case"
+giorni_indietro = 3
+mittenti = ["immobiliare.it", "idealista.it", "idealista.com", "casa.it", "wikicasa.it", "trovacasa.it", "subito.it"]
+
+[fonti.csv]
+# Qualsiasi file .csv in data/import/ (aste, annunci trovati altrove, agenzie…)
+attiva = true
+
+# ── Quartieri e valori OMI ───────────────────────────────────
+[geo]
+# File GeoJSON dei quartieri (NIL) del Comune di Milano, salvato in data/quartieri.geojson
+file_quartieri = "data/quartieri.geojson"
+# Se il file non c'è, il programma prova a scaricarlo da qui (lascia vuoto per non scaricare)
+url_quartieri = ""
+# Nome del campo che contiene il nome del quartiere nel GeoJSON
+campo_nome_quartiere = "NIL"
+# Massimo di indirizzi da geolocalizzare per esecuzione (OpenStreetMap: 1 al secondo)
+max_geocoding = 150
+
+# ── Punteggio "affare" ───────────────────────────────────────
+[punteggio]
+# Parole che indicano un venditore motivato (aumentano il punteggio)
+parole_motivato = ["urgente", "trattabile", "trasferimento", "occasione", "prezzo ribassato", "vendita veloce", "libero subito"]
+# Parole che spiegano un prezzo basso "finto": abbassano il punteggio e mostrano un avviso
+parole_rischio = ["nuda proprietà", "nuda proprieta", "occupato", "affittato", "locato", "usufrutto", "abuso", "condono"]
+# Parole solo informative (mostrate come etichetta)
+parole_info = ["da ristrutturare", "ristrutturato", "nuova costruzione", "asta", "box", "terrazzo", "giardino"]
+
+# ── Notifiche Telegram ───────────────────────────────────────
+[telegram]
+attiva = true
+# Avvisa per un nuovo annuncio con punteggio almeno pari a questo (0–100)
+soglia_nuovi = 70
+# Avvisa per un ribasso di almeno questa percentuale
+soglia_ribasso_pct = 3
+# Solo questi quartieri (lascia vuoto per tutta Milano). Es: ["ISOLA", "CITTA' STUDI"]
+quartieri = []
+# Annunci da seguire sempre (incolla qui il codice mostrato nella dashboard, es. "idealista:12345678")
+preferiti = []
+# Messaggio riassuntivo ogni mattina con le 5 migliori occasioni
+riepilogo_giornaliero = true
+# Non inviare più di tanti messaggi per esecuzione
+max_messaggi = 15
