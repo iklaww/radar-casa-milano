@@ -9,14 +9,14 @@
 # Indirizzo della tua dashboard su GitHub Pages (serve per i link nei messaggi Telegram)
 dashboard_url = "https://iklaww.github.io/radar-casa-milano/"
 # Un tuo indirizzo email: viene inviato a OpenStreetMap quando si cercano le coordinate degli indirizzi
-contatto_email = "tua-email@example.com"
+contatto_email = "radarcasamilano@gmail.com"
 # Dopo quanti giorni senza essere rivisto un annuncio è considerato "non più in vendita"
 giorni_scadenza = 45
 
 # ── Cosa cerchi (vale per raccolta e notifiche) ──────────────
 [ricerca]
 prezzo_min = 0
-prezzo_max = 900000
+prezzo_max = 300000
 mq_min = 40
 mq_max = 0            # 0 = nessun limite
 locali_min = 1
